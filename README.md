@@ -1,6 +1,6 @@
 # notes_firebase_ddd
 
-A new Flutter project.
+Runnig projecrt.
 
 ## Getting Started
 
