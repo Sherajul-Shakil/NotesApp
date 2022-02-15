@@ -1,0 +1,22 @@
+include: package:flutter_lints/flutter.yaml
+
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.gr.dart"
+    - "**/*.config.dart"
+    - "**/*.freezed.dart"
+  strong-mode:
+    implicit-casts: false
+    implicit-dynamic: false
+
+linter:
+
+  rules:
+    public_member_api_docs: false
+    sort_pub_dependencies: false
+    use_key_in_widget_constructors: false
+    lines_longer_than_80_chars: false
+    sort_unnamed_constructors_first: false
+    sort_constructors_first: false
