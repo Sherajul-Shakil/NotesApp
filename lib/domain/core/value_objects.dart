@@ -18,6 +18,13 @@ abstract class ValueObject<T> {
         );
   }
 
+  Either<ValueFailure<dynamic>, Unit> get failureOrUnit {
+    return value.fold(
+      (l) => Left(l),
+      (r) => const Right(unit),
+    );
+  }
+
   @override
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
