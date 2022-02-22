@@ -14,6 +14,255 @@ T _$identity<T>(T value) => value;
 final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more informations: https://github.com/rrousselGit/freezed#custom-getters-and-methods');
 
+NoteDto _$NoteDtoFromJson(Map<String, dynamic> json) {
+  return _NoteDto.fromJson(json);
+}
+
+/// @nodoc
+class _$NoteDtoTearOff {
+  const _$NoteDtoTearOff();
+
+  _NoteDto call(
+      {@JsonKey(ignore: true) String? id,
+      String? body,
+      int? color,
+      List<TodoItemDto?>? todos,
+      @ServerTimeStampConverter() required FieldValue? serverTimeStamp}) {
+    return _NoteDto(
+      id: id,
+      body: body,
+      color: color,
+      todos: todos,
+      serverTimeStamp: serverTimeStamp,
+    );
+  }
+
+  NoteDto fromJson(Map<String, Object?> json) {
+    return NoteDto.fromJson(json);
+  }
+}
+
+/// @nodoc
+const $NoteDto = _$NoteDtoTearOff();
+
+/// @nodoc
+mixin _$NoteDto {
+  @JsonKey(ignore: true)
+  String? get id => throw _privateConstructorUsedError;
+  String? get body => throw _privateConstructorUsedError;
+  int? get color => throw _privateConstructorUsedError;
+  List<TodoItemDto?>? get todos => throw _privateConstructorUsedError;
+  @ServerTimeStampConverter()
+  FieldValue? get serverTimeStamp => throw _privateConstructorUsedError;
+
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  @JsonKey(ignore: true)
+  $NoteDtoCopyWith<NoteDto> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $NoteDtoCopyWith<$Res> {
+  factory $NoteDtoCopyWith(NoteDto value, $Res Function(NoteDto) then) =
+      _$NoteDtoCopyWithImpl<$Res>;
+  $Res call(
+      {@JsonKey(ignore: true) String? id,
+      String? body,
+      int? color,
+      List<TodoItemDto?>? todos,
+      @ServerTimeStampConverter() FieldValue? serverTimeStamp});
+}
+
+/// @nodoc
+class _$NoteDtoCopyWithImpl<$Res> implements $NoteDtoCopyWith<$Res> {
+  _$NoteDtoCopyWithImpl(this._value, this._then);
+
+  final NoteDto _value;
+  // ignore: unused_field
+  final $Res Function(NoteDto) _then;
+
+  @override
+  $Res call({
+    Object? id = freezed,
+    Object? body = freezed,
+    Object? color = freezed,
+    Object? todos = freezed,
+    Object? serverTimeStamp = freezed,
+  }) {
+    return _then(_value.copyWith(
+      id: id == freezed
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String?,
+      body: body == freezed
+          ? _value.body
+          : body // ignore: cast_nullable_to_non_nullable
+              as String?,
+      color: color == freezed
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as int?,
+      todos: todos == freezed
+          ? _value.todos
+          : todos // ignore: cast_nullable_to_non_nullable
+              as List<TodoItemDto?>?,
+      serverTimeStamp: serverTimeStamp == freezed
+          ? _value.serverTimeStamp
+          : serverTimeStamp // ignore: cast_nullable_to_non_nullable
+              as FieldValue?,
+    ));
+  }
+}
+
+/// @nodoc
+abstract class _$NoteDtoCopyWith<$Res> implements $NoteDtoCopyWith<$Res> {
+  factory _$NoteDtoCopyWith(_NoteDto value, $Res Function(_NoteDto) then) =
+      __$NoteDtoCopyWithImpl<$Res>;
+  @override
+  $Res call(
+      {@JsonKey(ignore: true) String? id,
+      String? body,
+      int? color,
+      List<TodoItemDto?>? todos,
+      @ServerTimeStampConverter() FieldValue? serverTimeStamp});
+}
+
+/// @nodoc
+class __$NoteDtoCopyWithImpl<$Res> extends _$NoteDtoCopyWithImpl<$Res>
+    implements _$NoteDtoCopyWith<$Res> {
+  __$NoteDtoCopyWithImpl(_NoteDto _value, $Res Function(_NoteDto) _then)
+      : super(_value, (v) => _then(v as _NoteDto));
+
+  @override
+  _NoteDto get _value => super._value as _NoteDto;
+
+  @override
+  $Res call({
+    Object? id = freezed,
+    Object? body = freezed,
+    Object? color = freezed,
+    Object? todos = freezed,
+    Object? serverTimeStamp = freezed,
+  }) {
+    return _then(_NoteDto(
+      id: id == freezed
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String?,
+      body: body == freezed
+          ? _value.body
+          : body // ignore: cast_nullable_to_non_nullable
+              as String?,
+      color: color == freezed
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as int?,
+      todos: todos == freezed
+          ? _value.todos
+          : todos // ignore: cast_nullable_to_non_nullable
+              as List<TodoItemDto?>?,
+      serverTimeStamp: serverTimeStamp == freezed
+          ? _value.serverTimeStamp
+          : serverTimeStamp // ignore: cast_nullable_to_non_nullable
+              as FieldValue?,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$_NoteDto extends _NoteDto {
+  const _$_NoteDto(
+      {@JsonKey(ignore: true) this.id,
+      this.body,
+      this.color,
+      this.todos,
+      @ServerTimeStampConverter() required this.serverTimeStamp})
+      : super._();
+
+  factory _$_NoteDto.fromJson(Map<String, dynamic> json) =>
+      _$$_NoteDtoFromJson(json);
+
+  @override
+  @JsonKey(ignore: true)
+  final String? id;
+  @override
+  final String? body;
+  @override
+  final int? color;
+  @override
+  final List<TodoItemDto?>? todos;
+  @override
+  @ServerTimeStampConverter()
+  final FieldValue? serverTimeStamp;
+
+  @override
+  String toString() {
+    return 'NoteDto(id: $id, body: $body, color: $color, todos: $todos, serverTimeStamp: $serverTimeStamp)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _NoteDto &&
+            const DeepCollectionEquality().equals(other.id, id) &&
+            const DeepCollectionEquality().equals(other.body, body) &&
+            const DeepCollectionEquality().equals(other.color, color) &&
+            const DeepCollectionEquality().equals(other.todos, todos) &&
+            const DeepCollectionEquality()
+                .equals(other.serverTimeStamp, serverTimeStamp));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(id),
+      const DeepCollectionEquality().hash(body),
+      const DeepCollectionEquality().hash(color),
+      const DeepCollectionEquality().hash(todos),
+      const DeepCollectionEquality().hash(serverTimeStamp));
+
+  @JsonKey(ignore: true)
+  @override
+  _$NoteDtoCopyWith<_NoteDto> get copyWith =>
+      __$NoteDtoCopyWithImpl<_NoteDto>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$_NoteDtoToJson(this);
+  }
+}
+
+abstract class _NoteDto extends NoteDto {
+  const factory _NoteDto(
+          {@JsonKey(ignore: true) String? id,
+          String? body,
+          int? color,
+          List<TodoItemDto?>? todos,
+          @ServerTimeStampConverter() required FieldValue? serverTimeStamp}) =
+      _$_NoteDto;
+  const _NoteDto._() : super._();
+
+  factory _NoteDto.fromJson(Map<String, dynamic> json) = _$_NoteDto.fromJson;
+
+  @override
+  @JsonKey(ignore: true)
+  String? get id;
+  @override
+  String? get body;
+  @override
+  int? get color;
+  @override
+  List<TodoItemDto?>? get todos;
+  @override
+  @ServerTimeStampConverter()
+  FieldValue? get serverTimeStamp;
+  @override
+  @JsonKey(ignore: true)
+  _$NoteDtoCopyWith<_NoteDto> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
 TodoItemDto _$TodoItemDtoFromJson(Map<String, dynamic> json) {
   return _TodoItemDto.fromJson(json);
 }
