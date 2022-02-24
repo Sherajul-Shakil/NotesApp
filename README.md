@@ -186,6 +186,63 @@ class Password extends ValueObject<String> {
 
 ## End of Readme 2.
 
+# Domain abstraction(T3)
+> the application layer cannot depend on classes from the infrastructure layer.
+
+>Which actions do we need to perform on the authentication backend? There are three things, which we will translate into methods:
+
+- Register with email and password
+- Sign in with email and password
+- Sign in with Google
+
+>Let us, therefore, create i_auth_facade.dart under domain/auth. Its methods will take in EmailAddress and Password value objects
+
+>Note: Facade is a design pattern for connecting two or more classes with weird interfaces into just one simplified interface. In our case, it will connect FirebaseAuth and GoogleSignIn.
+
+## domain/auth/i_auth_facade.dart
+~~~dart
+abstract class IAuthFacade {
+  Future<Option<AsUser>> getSignedInUser();
+  Future<Either<AuthFailure, Unit>> registerWithEmailAndPassword({
+    required EmailAddress emailAddress,
+    required Password password,
+  });
+
+  Future<Either<AuthFailure, Unit>> signInWithEmailAndPassword({
+    required EmailAddress emailAddress,
+    required Password password,
+  });
+  Future<Either<AuthFailure, Unit>> signInWithGoogle();
+}
+~~~
+
+# AuthFailure:
+>Let's think about the possible failures which can occur during authentication. 
+
+- User "taps out" of the 3rd party sign-in flow (Google in our case)
+- There is an error on the auth server
+- User wants to register with an email which is already in use
+- User enters an invalid combination of email and password
+
+>Let's create this union inside domain/auth/auth_failure.dart.
+
+## domain/auth/auth_failure.dart:
+~~~dart
+@freezed
+abstract class AuthFailure with _$AuthFailure {
+  const factory AuthFailure.cancelledByUser() = CancelledByUser;
+  const factory AuthFailure.serverError() = ServerError;
+  const factory AuthFailure.emailAlreadyUsed() = EmailAlreadyUsed;
+  const factory AuthFailure.invalidEmailandPasswordCombination() =
+      InvalidEmailandPasswordCombination;
+}
+~~~
+
+>It's much better to use our trusted friend called Either where we pass around failures inside the Left side of it. But what are we going to put into the Right side? Can we create something like Either<AuthFailure, void>?
+
+>There is much to be said about Unit but for our purposes, we can think of it as of a functional equivalent to Dart's dumb void keyword.
+
+>we've discovered the Unit type which allows us to return "nothing" inside the Either union.
 
 
 
