@@ -81,11 +81,110 @@ This is the part of an app which doesn't care if you switch from Firebase to a R
 
 ## End of tutorial 1.
 
+# Authentication Value Objects(T2)
 
+# Email & password:
+>How can we sign in using email and password?  The usual way would be to have a sign in form that would validate the inputted Strings. You know, email addresses must have the '@' sign and passwords must be at least six characters long. We would then pass these Strings to the authentication service, in our case, Firebase Auth.
 
+# Validating at instantiation
+>You are probably used to validating Strings in a TextFormField.We will take this principle and take it to a whole another level. You see, not all validation is equal. We're about to perform the safest validation of them all - we're going to make illegal states unrepresentable. In other words, we will make it impossible for a class like EmailAddress to hold an invalid value not just while it's in the TextFormField but throughout its whole lifespan.
 
+# Either a failure or a value
+>Our current troubles stem from the fact that the EmailAddress class holds only a single field of type String. What if, instead of throwing an InvalidEmailException, we would instead somehow store it inside the class?This will allow us to not litter our codebase with try and catch statements at the time of instantiation. 
 
+>What if we joined the value and failure fields into one by using a union type? And not just any sort of a union - we're going to use Either.
 
+>Note: Either is a union type from the dartz package specifically suited to handle what we call "failures". It is a union of two values, commonly called Left and Right. The left side holds Failures and the right side holds the correct values, for example, Strings.
+
+>So, we're going to use dartz for Either but what about the regular unions? The best option is to use the freezed package. Let's add them to pubspec.yaml and since freezed uses code generation, we'll also add a bunch of other dependencies.
+
+~~~dart
+pubspec.yaml
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dartz: ^0.9.0-dev.6
+  freezed_annotation: ^0.7.1
+
+dev_dependencies:
+  build_runner:
+  freezed: ^0.9.2
+~~~
+
+# ValueFailure union
+>We'll group all failures from validated value objects into one such union - ValueFailure. Since this is something common across features, we'll create the failures.dart file inside the domain/core folder. While we're at it, let's also create a "short password" failure.
+
+## domain/core/failures.dart
+~~~dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+part 'failures.freezed.dart';
+
+@freezed
+abstract class ValueFailure<T> with _$ValueFailure<T> {
+  const factory ValueFailure.invalidEmail({
+    required T failedValue,
+  }) = InvalidEmail<T>;
+
+  const factory ValueFailure.shortPassword({
+    required T failedValue,
+  }) = ShortPassword<T>;
+}
+~~~
+>We made the class generic because we will also validate values other than  Strings later on in this series.
+
+>The value which can be held inside an EmailAddress will no longer be just a String. Instead, it will be Either<ValueFailure<String>, String>. The same will also be the return type of the validateEmailAddress function. Then, instead of throwing an exception, we're going to return the left side of Either.
+
+>Password: EmailAddress is implemented and it contains a lot of boilerplate code for toString, ==, and hashCode overrides. We surely don't want to duplicate all of this into a Password class. This is a perfect opportunity to create a super class.
+
+# Abstract ValueObject
+>This abstract class will extend specific value objects across multiple features. We're going to create it under domain/core. All it does is just extracting boilerplate into one place. Of course, we heavily rely on generics to allow the value to be of any type.
+
+## domain/core/value_objects.dart
+~~~dart
+@immutable
+abstract class ValueObject<T> {
+  const ValueObject();
+  Either<ValueFailure<T>, T> get value;
+
+  @override
+  bool operator ==(Object o) {
+    if (identical(this, o)) return true;
+    return o is ValueObject<T> && o.value == value;
+  }
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() => 'Value($value)';
+}
+~~~
+
+>We can now extend this class from EmailAddress and Password. 
+
+## domain/auth/value_objects.dart
+~~~dart
+class EmailAddress extends ValueObject<String> {
+  factory EmailAddress({String? email}) {
+    return EmailAddress._(validateEmailAddress(email: email!.trim()));
+  }
+  const EmailAddress._(this.value);
+  @override
+  final Either<ValueFailure<String>, String> value;
+}
+
+class Password extends ValueObject<String> {
+  factory Password({String? password}) {
+    return Password._(validatePassword(password: password!.trim()));
+  }
+  const Password._(this.value);
+  @override
+  final Either<ValueFailure<String>, String> value;
+}
+~~~
+
+## End of Readme 2.
 
 
 
