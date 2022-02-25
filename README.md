@@ -9,6 +9,8 @@ Runnig projecrt.
 - Google & email + password authentication
 - Reorderable todo lists and much more
 
+## Command: flutter pub run build_runner watch --delete-conflicting-outputs
+
 # Key architectural layers present in a DDD Flutter app(T1)
 
 <img src="./assets/images/ddd_structure.png" width="500" title="hover text">
@@ -244,11 +246,165 @@ abstract class AuthFailure with _$AuthFailure {
 
 >we've discovered the Unit type which allows us to return "nothing" inside the Either union.
 
+# Bloc overview(4)
+>As shown on the diagram, a BLoC receives events from the UI which contain raw data and outputs states which contain validated data, among other things. Let's now create the classes for the SignInFormBloc.
+
+~~~dart
+pubspec.yaml
+
+dependencies:
+  ...
+  flutter_bloc: ^3.2.0
+~~~
+
+>Create new directories so that the path application/auth/sign_in_form exists. Using the extensions mentioned above, create a a Bloc with the name "sign_in_form".
+
+>It's important to remember that events and states are a part of the presentation layer.
+
+# Events:
+>What possible events can occur in the UI of the sign-in form? Apart from the different sign-in buttons being pressed, there are also two other events which are usually handled directly in the UI unless you're following DDD - email and password input changes. Expressed as a union, the events will look like:
+
+## application/auth/sign_in_form/sign_in_form_event.dart
+~~~dart
+@freezed
+class SignInFormEvent with _$SignInFormEvent {
+  const factory SignInFormEvent.emailChanged(String email) = EmailChanged;
+  const factory SignInFormEvent.passwordChanged(String password) =
+      PasswrodChanged;
+
+  const factory SignInFormEvent.registerWithEmailAndPasswordPressed() =
+      RegisterWithEmailAndPasswordPressed;
+  const factory SignInFormEvent.signInWithEmailAndPasswordPressed() =
+      SignInWithEmailAndPasswordPressed;
+  const factory SignInFormEvent.signInWithGooglePressed() =
+      SignInWithGooglePressed;
+}
+~~~
+
+# state:
+
+>BLoC usually outputs multiple subclasses (or union cases) of state. What do we need to communicate back to the UI of the sign-in form?
+
+- Validated values: We surely want to pass back the validated EmailAddress and Password value objects to be able to show error messages in the TextFormFields.
+
+- Auth progress: Showing a progress indicator is a no-brainer, so we have to also pass back a bool isSubmitting.
+
+- Success or error backend response:To show an error Snackbar when something goes wrong in the backend, we will need to pass back the Either<AuthFailure, Unit> returned from the IAuthFacade. We're going to call it authFailureOrSuccess and you can think of it as of the auth backend "response".
+
+>However, there will initially be no response until the user presses a button. We could just initially assign null to the authFailureOrSuccess field but you know that this sucks.
+
+>A much better option would be to use an Option 🙃. Much like Either, it's a union of two values - Some and None. It's a sort of a non-nullable type where null gets replaced by the None union case. Only the Some union case holds a value which will be the Either<AuthFailure, Unit>.
+
+- Whether or not to show input error messages: Lastly, we want to show the input validation error messages under the TextFormFields only after the first press of a sign-in/register button. This will be communicated back to the UI inside a bool showErrorMessages.
+
+## application/auth/sign_in_form/sign_in_form_state.dart
+~~~dart
+@freezed
+class SignInFormState with _$SignInFormState {
+  const factory SignInFormState({
+    required EmailAddress emailAddress,
+    required Password password,
+    required bool isSubmitting,
+    required AutovalidateMode showErrorMessages,
+    required Option<Either<AuthFailure, Unit>> authFailureOrSuccessOption,
+  }) = _SignInFormState;
+
+  factory SignInFormState.initial() => SignInFormState(
+        emailAddress: EmailAddress(email: ''),
+        password: Password(password: ''),
+        isSubmitting: false,
+        showErrorMessages: AutovalidateMode.disabled,
+        authFailureOrSuccessOption: none(),
+      );
+}
+~~~
+
+# bloc
+>While events and the state data class can be viewed as View Models which live in the presentation layer, the SignInFormBloc class itself performs application logic, i.e. orchestrating the other layers to work together.
+
+>This is where the raw Strings turn into validated ValueObjects and where the IAuthFacade's methods are called. The logic performed here is focused on transforming incoming events into states.
+
+## application/auth/sign_in_form/sign_in_form_bloc.dart
+~~~dart
+part 'sign_in_form_event.dart';
+part 'sign_in_form_state.dart';
+
+part 'sign_in_form_bloc.freezed.dart';
+
+class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
+  final IAuthFacade _authFacade;
+
+  SignInFormBloc(this._authFacade);
+
+  @override
+  SignInFormState get initialState => SignInFormState.initial();
+
+  @override
+  Stream<SignInFormState> mapEventToState(
+    SignInFormEvent event,
+  ) async* {
+    // TODO: Implement
+  }
+}
+~~~
+## End of T4
 
 
 
+~~~dart
 
+~~~
+~~~dart
 
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
 
 
 
