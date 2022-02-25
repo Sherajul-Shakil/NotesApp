@@ -595,27 +595,79 @@ try {
   }
 ~~~
 ## End of T6
-~~~dart
 
-~~~
+# Injectable & Linting(T7)
+>when you look at it closely there constructors accept firebase or Google sign in and so on the problem is that we are not testing these dependencies into the classes which we have created before in any sort of way that's why we need to add dependency injection into our app and we are going to use injectable for that.
 ~~~dart
+class FirebaseAuthFacade implements IAuthFacade {
+  FirebaseAuthFacade(this._firebaseAuth, this._googleSignIn);
 
+  final FirebaseAuth _firebaseAuth;
+  final GoogleSignIn _googleSignIn;
+}
 ~~~
+> let's add in injectable for dependency injection and also get it because injectable actually works with get it which is a service. locator 
 ~~~dart
+injectable: ^1.5.3
+get_it: ^7.2.0
 
+DEV:
+injectable_generator: ^1.5.3
+flutter_lints: ^1.0.0
 ~~~
+
+> let's immediately jump into it first up we are going to set up linting.
+
+>that's the yeah the root folder and we are just going to add a new file which is going to be called analysis options yamo and this is where we can enable custom analyzer errors and overall configure the things which we are going to see as errors and warnings in our app.
+
+>the way injectable works is that you have to have one file create it for example we can create it in the lib of our project just where main dart lives 
 ~~~dart
+final GetIt getIt = GetIt.instance;
 
+@injectableInit
+void configureInjection(String env) {
+  $initGetIt(getIt, environment: env);
+}
 ~~~
+
+>we definitely want to annotate our sign-in form block because this is expecting an I auth facade instance to be passed into it so we can annotate it with an injectable.
 ~~~dart
-
+@injectable
+class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
+  final IAuthFacade _authFacade;
+}
 ~~~
+
+>we should know that what we actually want is the concrete implementation of firebase of facade what we can do is simple we can go over to firebase of facade and just say that we want to make it a lazy singleton and register it as and the type under which we wanna register.
 ~~~dart
-
+@LazySingleton(as: IAuthFacade)
+class FirebaseAuthFacade implements IAuthFacade {
+  FirebaseAuthFacade(this._firebaseAuth, this._googleSignIn);
+}
 ~~~
+
+>we are doing domain-driven design with this sort of a folder layout so into which folder should we put our firebase injectible module. I would say that the best place to put this module is inside the infrastructure folder under the core sub folder and we are going to create a new file firebase injectable module dot dart we're going to create an abstract class firebase injectable module abstract and we are going to mark it with add register module and which sort of third-party dependencies.
+
+>we need to register whatever is passed into firebase_auth_facade and that is firebase auth and also Google sign-in so let's start off with Google sign-in so let's jump into the firebase injectable module and we are just going to create Google sign-in get. 
+
+>why on earth did we put this firebase injectable module into the core folder of infrastructure? why did we not put it into the auth folder of infrastructure? well the answer is that I would say that this sort of injectable modules would really have nothing else to do than to specify a few properties to get registered they should be in the core folder.
 ~~~dart
-
+@module
+abstract class FirebaseInjectableModule {
+  @lazySingleton
+  GoogleSignIn get googleSignIn => GoogleSignIn();
+  @lazySingleton
+  FirebaseAuth get firebaseAuth => FirebaseAuth.instance;
+  }
+}
 ~~~
+
+>In main.dart use
+~~~dart
+configureInjection(Environment.prod);
+~~~
+## End of T7
+
 ~~~dart
 
 ~~~
