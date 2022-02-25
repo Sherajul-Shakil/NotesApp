@@ -48,7 +48,7 @@ class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
     RegisterWithEmailAndPasswordPressed event,
     Emitter<SignInFormState> emit,
   ) async {
-    Either<AuthFailure, Unit>? failureOrSucces;
+    Either<AuthFailure, Unit>? failureOrSuccess;
 
     final isEmailValid = state.emailAddress.isValid();
     final isPasswordValid = state.password.isValid();
@@ -58,17 +58,18 @@ class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
         isSubmitting: true,
         authFailureOrSuccessOption: none(),
       ));
-      failureOrSucces = await _authFacade.registerWithEmailAndPassword(
+      failureOrSuccess = await _authFacade.registerWithEmailAndPassword(
         emailAddress: state.emailAddress,
         password: state.password,
       );
     } else {
-      //  failureOrSucces = none();
+      //failureOrSuccess = none() as Either<AuthFailure, Unit>?;
     }
     emit(state.copyWith(
       isSubmitting: false,
       showErrorMessages: AutovalidateMode.always,
-      authFailureOrSuccessOption: optionOf(failureOrSucces), //if null then none
+      authFailureOrSuccessOption:
+          optionOf(failureOrSuccess), //if null then none
       //if some then some (handy use of ternary));
     ));
   }

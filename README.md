@@ -349,23 +349,130 @@ class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
 ~~~
 ## End of T4
 
+# Bloc Logic:
+>The logic performed inside BLoCs is focused on transforming incoming events into states. For example, a raw String will come in from the UI and a validated EmailAddress will come out.
 
+## Field updates:
+>The simplest events to implement are those which simply receive unvalidated raw data from the UI and transform it into validated ValueObjects.
+~~~dart
+on<EmailChanged>((event, emit) async {
+      emit(state.copyWith(
+        emailAddress: EmailAddress(email: event.email),
+        authFailureOrSuccessOption: none(), //resetting the previous response
+      ));
+    });
+    on<PasswrodChanged>((event, emit) async {
+      emit(state.copyWith(
+        password: Password(password: event.password),
+        authFailureOrSuccessOption: none(), //resetting the previous response
+      ));
+    });
+~~~
+>We have to reset the authFailureOrSuccessOption field whenever we emit a new state. This field holds a "response" from the previous call to sign in/register using IAuthFacade. Surely, when the email address changes, it's not correct to associate the old "auth response" with the updated email address.
+
+# Sign in with Google:
+>We're finally going to call a method on the IAuthFacade from this event handler. First, we'll indicate that the form is in the process of being submitted and once the signInWithGoogle method had a chance to run, we'll yield a state containing either a failure (AuthFailure) or success (Unit).
+~~~dart
+    on<SignInWithGooglePressed>((event, emit) async {
+      emit(state.copyWith(
+        isSubmitting: true,
+        authFailureOrSuccessOption: none(), //resetting the previous response
+      ));
+      final failureOrSuccess = await _authFacade.signInWithGoogle();
+      emit(state.copyWith(
+        isSubmitting: false,
+        authFailureOrSuccessOption:
+            some(failureOrSuccess), //adding the response
+      ));
+    });
+~~~
+
+# Register & sign in with email and password:
+>These last two event handlers contain the largest amount of code. It's still simple though and the logic can be broken down into a couple of steps. Let's focus on the registration at first.
+
+- Check if the entered EmailAddress and Password are valid.
+
+- If valid, register using IAuthFacade and yield Some<Right<Unit>> in the authFailureOrSuccessOption state field.
+
+- If invalid, indicate to start showing error messages and keep the authFailureOrSuccessOption set to None.
+
+>We know that ValueObjects have a value property which is of type Either. Therefore, to check if the inputted email address is valid, we can simply call myEmailAddress.value.isRight(). Wouldn't it be more expressive though to call myEmailAddress.isValid()? Let's create such a method in the ValueObject super class:
 
 ~~~dart
+@immutable
+abstract class ValueObject<T> {
+  const ValueObject();
+  Either<ValueFailure<T>, T> get value;
 
+  bool isValid() => value.isRight();
+}
 ~~~
+
+>With this, we can go ahead and implement the sign in event handler.
 ~~~dart
+  Future<void> _registerWithEmailAndPassword(
+    RegisterWithEmailAndPasswordPressed event,
+    Emitter<SignInFormState> emit,
+  ) async {
+    Either<AuthFailure, Unit>? failureOrSuccess;
 
+    final isEmailValid = state.emailAddress.isValid();
+    final isPasswordValid = state.password.isValid();
+
+    if (isEmailValid && isPasswordValid) {
+      emit(state.copyWith(
+        isSubmitting: true,
+        authFailureOrSuccessOption: none(),
+      ));
+      failureOrSuccess = await _authFacade.registerWithEmailAndPassword(
+        emailAddress: state.emailAddress,
+        password: state.password,
+      );
+    } else {
+      //failureOrSuccess = none() as Either<AuthFailure, Unit>?;
+    }
+    emit(state.copyWith(
+      isSubmitting: false,
+      showErrorMessages: AutovalidateMode.always,
+      authFailureOrSuccessOption:
+          optionOf(failureOrSuccess), //if null then none
+      //if some then some (handy use of ternary));
+    ));
+  }
 ~~~
+
+>Awesome! We can now implement the signInWithEmailAndPasswordPressed event handler but it will be suspiciously simple 🧐
 ~~~dart
+  Future<void> _loginWithEmailAndPassword(
+    SignInWithEmailAndPasswordPressed event,
+    Emitter<SignInFormState> emit,
+  ) async {
+    Either<AuthFailure, Unit>? failureOrSucces;
 
-~~~
-~~~dart
+    final isEmailValid = state.emailAddress.isValid();
+    final isPasswordValid = state.password.isValid();
 
+    if (isEmailValid && isPasswordValid) {
+      emit(state.copyWith(
+        isSubmitting: true,
+        authFailureOrSuccessOption: none(),
+      ));
+      failureOrSucces = await _authFacade.signInWithEmailAndPassword(
+        emailAddress: state.emailAddress,
+        password: state.password,
+      );
+    } else {
+      //  failureOrSucces = none();
+    }
+    emit(state.copyWith(
+      isSubmitting: false,
+      showErrorMessages: AutovalidateMode.always,
+      authFailureOrSuccessOption: optionOf(failureOrSucces), //if null then none
+      //if some then some (handy use of ternary));
+    ));
+  }
 ~~~
-~~~dart
-
-~~~
+## End of T5
 ~~~dart
 
 ~~~
