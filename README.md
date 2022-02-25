@@ -50,7 +50,7 @@ This layer is all Widgets 💙 and also the state of the Widgets. we're going to
 
 >The domain layer is the pristine center of an app. It is fully self contained and it doesn't depend on any other layers. Domain is not concerned with anything but doing its own job well.
 
-This is the part of an app which doesn't care if you switch from Firebase to a REST API or if you change your mind and you migrate from the Hive database to Moor. Because domain doesn't depend on anything external, changes to such implementation details don't affect it. On the other hand, all the other layers do depend on domain.
+>This is the part of an app which doesn't care if you switch from Firebase to a REST API or if you change your mind and you migrate from the Hive database to Moor. Because domain doesn't depend on anything external, changes to such implementation details don't affect it. On the other hand, all the other layers do depend on domain.
 
 >So, what exactly goes on inside the domain layer? This is where your business logic lives, which is not Flutter/server/device dependent goes into domain. This includes:
 
@@ -473,21 +473,128 @@ abstract class ValueObject<T> {
   }
 ~~~
 ## End of T5
-~~~dart
 
+#  Firebase Auth Setup & Facade(T6)
+>so the first thing we should do here is to create a firebase project because actually up until now we did not have any firebase configuration inside our app.
+
+# infrustructure/auth/firebase_auth_facade.dart
+>Implementation of i_auth_facade.dart:
+
+~~~dart
+  @override
+  Future<Either<AuthFailure, Unit>> registerWithEmailAndPassword({
+    required EmailAddress emailAddress,
+    required Password password,
+  }) async {
+    //_firebaseAuth.currentUser!()
+    final emailAddressString = emailAddress.getOrCrash();
+    final passwordString = password.getOrCrash();
+
+    try {
+      await _firebaseAuth.createUserWithEmailAndPassword(
+        email: emailAddressString,
+        password: passwordString,
+      );
+      return right(unit);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        return left(const AuthFailure.emailAlreadyUsed());
+      } else {
+        return left(const AuthFailure.serverError());
+      }
+    }
+  }
+~~~
+
+>so let's jump into register with email and password first right what we should do here is to call firebase off that create user with email and password. the problem though is that the method on firebase auth does not have the concept of our value object email address and password. it expects a string and indeed email address is just a string which is validated and the same goes for password.
+
+>for some reason which is completely unknown there is an invalid thing held inside the email address we're going to crash the app and that's precisely what we should do because again this situation should not even happen in the first place.
+
+~~~dart
+domain/core/value_objects.dart
+  T getOrCrash() {
+    return value.fold(
+        (l) => throw UnexpectedValueError(l), id //shorthand of (r) => r
+        );
+  }
 ~~~
 ~~~dart
+domain/core/failures.dart
+class UnexpectedValueError extends Error {
+  UnexpectedValueError(this.valueFailure);
+  final ValueFailure valueFailure;
 
+  @override
+  String toString() {
+    const explanation = 'Encountered a ValueFailure at an unrecoverable point.';
+    return Error.safeToString(
+        '$explanation Terminating!!.\n failure was: $valueFailure');
+  }
+}
 ~~~
+
+>are returning left from the catch statement but we are now returning anything from the try block so if there is no exception happening we are not gonna return anything and we need to return something so what can we do well. we can return right unit. because unit is used inside either to signify that nothing wrong happened.
+
 ~~~dart
-
+try {
+      await _firebaseAuth.createUserWithEmailAndPassword(
+        email: emailAddressString,
+        password: passwordString,
+      );
+      return right(unit);
+    }
 ~~~
+
+## signInWithEmailAndPassword:
 ~~~dart
+  @override
+  Future<Either<AuthFailure, Unit>> signInWithEmailAndPassword({
+    required EmailAddress emailAddress,
+    required Password password,
+  }) async {
+    final emailAddressString = emailAddress.getOrCrash();
+    final passwordString = password.getOrCrash();
 
+    try {
+      await _firebaseAuth.signInWithEmailAndPassword(
+        email: emailAddressString,
+        password: passwordString,
+      );
+      return right(unit);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        return left(const AuthFailure.invalidEmailandPasswordCombination());
+      } else {
+        return left(const AuthFailure.serverError());
+      }
+    }
+  }
 ~~~
+>why is that why do we not have separate failure for a wrong password and a separate one for user not found?why do we join them together? well the reason for that is that if we said wrong password to the user in the UI that user if he tried to be malicious could know now that the email address is actually correct and only the password is wrong and what could happen then is that the user could do a brute-force tag or just simply try to hack the account because that user which is malicious would know that oh that email address is already present on the back end I just need to find out about a password.
+
+## signInWithGoogle:
 ~~~dart
+  @override
+  Future<Either<AuthFailure, Unit>> signInWithGoogle() async {
+    try {
+      final googleUser = await _googleSignIn.signIn();
 
+      if (googleUser == null) {
+        return left(const AuthFailure.cancelledByUser());
+      }
+      final googleAuthentication = await googleUser.authentication;
+      final authCredential = GoogleAuthProvider.credential(
+        idToken: googleAuthentication.idToken,
+        accessToken: googleAuthentication.accessToken,
+      );
+      await _firebaseAuth.signInWithCredential(authCredential);
+      return right(unit);
+    } on FirebaseAuthException catch (_) {
+      return left(const AuthFailure.serverError());
+    }
+  }
 ~~~
+## End of T6
 ~~~dart
 
 ~~~
