@@ -1019,9 +1019,203 @@ class SplashPage extends StatelessWidget {
 ~~~
 >block listener is useful for doing things which basically cannot happen during build. so something like navigation is certainly something which cannot happen during built and so that's why we need to use the block listener which runs after the build has finished.
 ## End of T10
+## 😍😍😍😍😍😍😍😍😍Authentication is finished😍😍😍😍😍😍😍😍😍
+
+# Note Value Failures(T11)
+>we are going to start off maybe unconventionally and that is by creating all of the possible failures which can occur during creating of a note or the todo.
+
+## domain/core/failure.dart
+~~~dart
+  const factory ValueFailure.exceedingLength({
+    required T failedValue,
+    required int max,
+  }) = ExceedingLength<T>;
+
+  const factory ValueFailure.empty({
+    required T failedValue,
+  }) = Empty<T>;
+
+  const factory ValueFailure.multiLine({
+    required T failedValue,
+  }) = MultiLine<T>;
+
+  const factory ValueFailure.listTooLong({
+    required T failedValue,
+    required int max,
+  }) = ListTooLong<T>;
+~~~
+## End of T11
 
 
+# Note Value Objects(T12)
+>Validate the notes failures.
 
+## domain/core/value_validators.dart
+~~~dart
+Either<ValueFailure<String>, String> validateMaxStringLength(
+  String? input,
+  int? maxLength,
+) {
+  if (input!.length <= maxLength!) {
+    return right(input);
+  } else {
+    return left(
+      ValueFailure.exceedingLength(
+        failedValue: input,
+        max: maxLength,
+      ),
+    );
+  }
+}
+
+Either<ValueFailure<String>, String> validateStringNotEmpty(
+  String? input,
+) {
+  if (input!.isNotEmpty) {
+    return right(input);
+  } else {
+    return left(ValueFailure.empty(failedValue: input));
+  }
+}
+
+Either<ValueFailure<String>, String> validateSingleLine(
+  String? input,
+) {
+  if (!input!.contains('\n')) {
+    return right(input);
+  } else {
+    return left(ValueFailure.empty(failedValue: input));
+  }
+}
+
+Either<ValueFailure<KtList<T>>, KtList<T>> validateMaxListLength<T>(
+  KtList<T>? input,
+  int? maxLength,
+) {
+  if (input!.size <= maxLength!) {
+    return right(input);
+  } else {
+    return left(ValueFailure.listTooLong(
+      failedValue: input,
+      max: maxLength,
+    ));
+  }
+}
+~~~
+
+>let's continue let's go ahead and create the value objects which are going to be needed in the notes feature. so again what do we want to have here we want to have notes body we want to have a to-do name and also note color and I hope I didn't forget about anything else. so we are going to go ahead and create a new folder under domain it's gonna be called notes and over there under this folder we are going to create a new file value_objects.dart and let's go ahead and create our value_objects.
+
+## domain/notes/value_objects.dart
+~~~dart
+class NoteBody extends ValueObject<String> {
+  factory NoteBody(String input) {
+    return NoteBody._(
+      validateMaxStringLength(
+        input,
+        maxLength,
+      ).flatMap(validateStringNotEmpty),
+      //check 1st condition and then second condition.
+      //if first condition is false then skip second condition
+      //kind of middlewares in express.js
+    );
+  }
+  const NoteBody._(this.value);
+
+  @override
+  final Either<ValueFailure<String>, String> value;
+  static const maxLength = 1000;
+}
+
+class TodoName extends ValueObject<String> {
+  factory TodoName(String input) {
+    return TodoName._(
+      validateMaxStringLength(input, maxLength)
+          .flatMap(validateStringNotEmpty)
+          .flatMap(validateSingleLine),
+      //(a) => pFunc(func(a));
+      // instead we can write
+      //  pFunc(func)
+    );
+  }
+  const TodoName._(this.value);
+
+  @override
+  final Either<ValueFailure<String>, String> value;
+  static const maxLength = 30;
+}
+
+class NoteColor extends ValueObject<Color> {
+  factory NoteColor(Color input) {
+    return NoteColor._(right(makeColorOpaque(input)));
+  }
+  const NoteColor._(this.value);
+
+  @override
+  final Either<ValueFailure<Color>, Color> value;
+  static const List<Color> predefinedColors = [
+    Color(0xfffafafa), // canvas
+    Color(0xfffa8072), // salmon
+    Color(0xfffedc56), // mustard
+    Color(0xffd0f0c0), // tea
+    Color(0xfffca3b7), // flamingo
+    Color(0xff997950), // tortilla
+    Color(0xfffffdd0), // cream
+  ];
+}
+
+class ListThree<T> extends ValueObject<KtList<T>> {
+  factory ListThree(KtList<T> input) {
+    return ListThree._(
+      validateMaxListLength(input, maxLength),
+    );
+  }
+  const ListThree._(this.value);
+
+  @override
+  final Either<ValueFailure<KtList<T>>, KtList<T>> value;
+  static const maxLength = 3;
+  int get length => value.getOrElse(emptyList).size;
+  bool get isFull => length == maxLength;
+}
+
+~~~
+
+>For transparency
+## domain/core/value_transformer.dart
+~~~dart
+Color makeColorOpaque(Color color) {
+  return color.withOpacity(1);
+}
+~~~
+## End of T12
+
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
 ~~~dart
 
 ~~~
