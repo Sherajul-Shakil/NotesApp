@@ -904,9 +904,21 @@ extension FirebaseUserDomainX on User {
 ~~~
 ## End of T9
 
-~~~dart
 
+# Navigation Based on Auth State(T10)
+>we also need to have some sort of a general authentication or auth block which will do things like check for the authentication status and also this block will sign out the user if needed.
+
+>we can go about setting up how the events and States are going to look like. so as you know already events are four things which we want the block to accomplish this is what comes into the block and it tells the block what to do. so what is our block going to respond to or what is it going to do well it's going to check the authentication status and it's also possibly going to sign the user out when the user presses a sign out button.
+## application/auth/auth_event.dart
+~~~dart
+@freezed
+abstract class AuthEvent with _$AuthEvent {
+  const factory AuthEvent.authCheckRequested() = AuthCheckRequested;
+  const factory AuthEvent.signedOut() = SignedOut;
+}
 ~~~
+
+> until we call this get signed and use your method we have no clue where or now we are signed in and that's what this initial state represents.
 ~~~dart
 
 ~~~
