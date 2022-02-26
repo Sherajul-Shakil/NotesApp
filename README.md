@@ -918,22 +918,110 @@ abstract class AuthEvent with _$AuthEvent {
 }
 ~~~
 
-> until we call this get signed and use your method we have no clue where or now we are signed in and that's what this initial state represents.
-~~~dart
 
-~~~
+## application/auth/auth_state.dart
 ~~~dart
-
+@freezed
+abstract class AuthState with _$AuthState {
+  const factory AuthState.initial() = Initial;
+  const factory AuthState.authenticated() = Authenticated;
+  const factory AuthState.unAuthenticated() = UnAuthenticated;
+}
 ~~~
+> initial(): until we call this get signed and use your method we have no clue where or now we are signed in and that's what this initial state represents.
+
+
+>Const of state that initial by the looks of it both blog is probably going to need to communicate with the firebase auth facade but because we are inside the application layer this means that we are not going to communicate directly with the infrastructure layer which holds the firebase auth facade the concrete implementation. no we are instead going to communicate with the abstract I auth façade(infrustructure/auth/firebase_auth_facade.dart).
+
+## application/auth/auth_bloc.dart
 ~~~dart
+@injectable
+class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  final IAuthFacade _authFacade;
+  AuthBloc(this._authFacade) : super(const Initial()) {
+    on<AuthCheckRequested>((event, emit) async {
+      final userOption = await _authFacade.getSignedInUser();
+      emit(userOption.fold(
+        () => const AuthState.unAuthenticated(),
+        (a) => const AuthState.authenticated(),
+      ));
+    });
 
+    on<SignedOut>((event, emit) async {
+      await _authFacade.signOut();
+      emit(const AuthState.unAuthenticated());
+    });
+  }
+}
 ~~~
+
+>in this part we are going to add the splash page which is going to decide what to show at the beginning after the user launches the app that's where we are going to call this off check requested event from and in order to navigate to our pages we can just use the material paid route or we can use named routes and set it up all by ourselves or we can introduce another dependency which is going to make our lives so much easier. it's not a golden bullet but in this case it's precisely what is going to facilitate easier writing of the code. so I would say let's go for it it's actually quite a cool library it's called or route or auto route.
+
+## presentation/routes/router.dart
 ~~~dart
-
+@MaterialAutoRouter(
+  routes: <AutoRoute>[
+    AutoRoute<dynamic>(page: SplashPage, initial: true),
+    AutoRoute<dynamic>(page: SignInPage),
+    // AutoRoute<dynamic>(page: NotesOverviewPage),
+    // AutoRoute<dynamic>(
+    //   page: NoteFormPage,
+    //   fullscreenDialog: true,
+    // ),
+  ],
+)
+class $AppRouter {}
 ~~~
+
+>To acces auth condition of authenticate and unauthenticate wrap the MaterialApp with MultiBlocProvider. we are actually wrapping the top level material app and by the virtue of that our block is going to be available literally everywhere.
+## presentation/core/app_widget.dart
 ~~~dart
-
+return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) =>
+              getIt<AuthBloc>()..add(const AuthEvent.authCheckRequested()),
+        ),
+      ],
+    )
 ~~~
+
+>the block listener widget is for to observe the block and where are we going to observe the block from well certainly not from the sign-in page which is currently being the home of our material app. now we need to have a separate page which is going to be basically the decision maker about where to navigate next. if the user is signed in we're going to navigate to the home page which is going to show the user the notes but if the user is not signed in we're going to navigate to the sign-in page and all of that is going to be decided upon in the splash page. so we need to get rid of this home sign-in page of our material app and actually because we are using auto route library we are going to set up the Builder of our material app and we are going to set it to be extended navigator which comes from order out and pass in our generated router class.
+
+## presentation/splash/splash_screen/dart
+~~~dart
+class SplashPage extends StatelessWidget {
+  const SplashPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    //BlocListener run after build has finished
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        state.map(
+          initial: (_) {},
+          authenticated: (_) {
+            print("authenticated");
+            //context.router.replace(const NotesOverviewPageRoute());
+          },
+          unAuthenticated: (_) =>
+              context.router.replace(const SignInPageRoute()),
+        );
+      },
+      child: const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+    );
+  }
+}
+~~~
+>block listener is useful for doing things which basically cannot happen during build. so something like navigation is certainly something which cannot happen during built and so that's why we need to use the block listener which runs after the build has finished.
+## End of T10
+
+
+
 ~~~dart
 
 ~~~
