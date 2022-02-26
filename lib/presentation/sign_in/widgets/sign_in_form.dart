@@ -37,6 +37,13 @@ class SignInForm extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           child: Form(
             autovalidateMode: state.showErrorMessages,
+            // this is coming from the block and from the
+            // block consumer respectively this will
+            // allow for the immediate validation of
+            // the input as soon as one character
+            // changes is going to be validated and
+            // possibly an error message will be shown
+            // below the text form field
             child: ListView(children: [
               const Text(
                 '📝',
@@ -52,6 +59,8 @@ class SignInForm extends StatelessWidget {
                 autocorrect: false,
                 onChanged: (value) => BlocProvider.of<SignInFormBloc>(context)
                     .add(SignInFormEvent.emailChanged(value)),
+                // this value will be
+                // validated inside our value object
                 validator: (_) => context
                     .read<SignInFormBloc>()
                     .state

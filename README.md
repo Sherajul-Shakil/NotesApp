@@ -668,9 +668,276 @@ configureInjection(Environment.prod);
 ~~~
 ## End of T7
 
+
+# Sign-In Form UI(T8)
+## Presentation/sign_in/sign_in_page.dart
+~~~dart
+class SignInPage extends StatelessWidget {
+  const SignInPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sign In'),
+      ),
+      body: BlocProvider(
+        create: (context) => getIt<SignInFormBloc>(),
+        child: const SignInForm(),
+      ),
+    );
+  }
+}
+~~~
+## Presentation/sign_in/widget/sign_in_form.dart
+~~~dart
+class SignInForm extends StatelessWidget {
+  const SignInForm({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<SignInFormBloc, SignInFormState>(
+      listener: (context, state) {
+        state.authFailureOrSuccessOption.fold(
+          () {},
+          (either) => either.fold(
+            (l) {
+              // ignore: avoid_single_cascade_in_expression_statements
+              Flushbar<dynamic>(
+                title: '⚠',
+                message: l.map(
+                  serverError: (_) => 'Server Error!',
+                  emailAlreadyUsed: (_) => 'Email already in use!',
+                  invalidEmailandPasswordCombination: (_) =>
+                      'Invalid email and password combination',
+                  cancelledByUser: (_) => 'Cancelled!',
+                ),
+                duration: const Duration(seconds: 3),
+              ).show(context);
+            },
+            (r) {},
+          ),
+        );
+      },
+      builder: (context, state) {
+        return Padding(
+          padding: const EdgeInsets.all(8),
+          child: Form(
+            autovalidateMode: state.showErrorMessages,
+            // this is coming from the block and from the
+            // block consumer respectively this will
+            // allow for the immediate validation of
+            // the input as soon as one character
+            // changes is going to be validated and
+            // possibly an error message will be shown
+            // below the text form field
+            child: ListView(children: [
+              const Text(
+                '📝',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 130),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.email),
+                  labelText: 'Email',
+                ),
+                autocorrect: false,
+                onChanged: (value) => BlocProvider.of<SignInFormBloc>(context)
+                    .add(SignInFormEvent.emailChanged(value)),
+                // this value will be
+                // validated inside our value object
+                validator: (_) => context
+                    .read<SignInFormBloc>()
+                    .state
+                    .emailAddress
+                    .value
+                    .fold(
+                      (l) => l.maybeMap(
+                        orElse: () => null,
+                        invalidEmail: (_) => 'Invalid Email',
+                      ),
+                      (_) => null,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.lock),
+                  labelText: 'Password',
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      //toogleShowPassword.value = !toogleShowPassword.value;
+                    },
+                    icon: const Icon(Icons.visibility),
+                    // toogleShowPassword.value == true
+                    //     ? const Icon(Icons.visibility_off)
+                    //     : const Icon(Icons.visibility),
+                  ),
+                ),
+                obscureText: true,
+                // !(!!toogleShowPassword.value),
+                autocorrect: false,
+                onChanged: (value) => BlocProvider.of<SignInFormBloc>(context)
+                    .add(SignInFormEvent.passwordChanged(value)),
+                validator: (_) =>
+                    context.read<SignInFormBloc>().state.password.value.fold(
+                          (l) => l.maybeMap(
+                            orElse: () => null,
+                            shortPassword: (_) => 'Short Password',
+                          ),
+                          (_) => null,
+                        ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      context.read<SignInFormBloc>().add(
+                            const SignInFormEvent
+                                .signInWithEmailAndPasswordPressed(),
+                          );
+                    },
+                    child: const Text('SIGN IN'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      context.read<SignInFormBloc>().add(
+                            const SignInFormEvent
+                                .registerWithEmailAndPasswordPressed(),
+                          );
+                    },
+                    child: const Text('REGISTER'),
+                  ),
+                ],
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  context.read<SignInFormBloc>().add(
+                        const SignInFormEvent.signInWithGooglePressed(),
+                      );
+                },
+                child: const Text('SIGN IN WITH GOOGLE'),
+              ),
+              if (state.isSubmitting) ...[
+                const SizedBox(height: 8),
+                const CupertinoActivityIndicator(),
+              ],
+            ]),
+          ),
+        );
+      },
+    );
+  }
+}
+~~~
+## End of T8
+
+
+# Getting the Signed-In User(T9)
+>To get current user we need a unique id.
+
+## domain/auth/user.dart
+~~~dart
+@freezed
+abstract class AsUser with _$AsUser {
+  const factory AsUser({
+    required UniqueId id,
+  }) = _AsUser;
+}
+~~~
+
+>we are not going to be generating unique IDs inside our app instead we can obtain the unique IDs directly from firebase off by this UID call which provides the user ID for the signed-in user.
+## domain/auth/value_objects.dart
+~~~dart
+class UniqueId extends ValueObject<String> {
+  @override
+  factory UniqueId() {
+    return UniqueId._(
+      // ignore: prefer_const_constructors
+      right(Uuid().v1()),
+    );
+  }
+  const UniqueId._(this.value);
+  factory UniqueId.fromUniqueString(String uniqueId) {
+    return UniqueId._(right(uniqueId));
+  }
+
+  @override
+  final Either<ValueFailure<String>, String> value;
+}
+~~~
+
+## domain/auth/i_auth_facade.dart
+~~~dart
+Future<Option<AsUser>> getSignedInUser();
+Future<void> signOut();
+~~~
+
+>Let's implement getSignedInUser()
+## infrustructure/auth/firabse_auth_facade.dart
+~~~dart
+  @override
+  Future<Option<AsUser>> getSignedInUser() async {
+    return optionOf(_firebaseAuth.currentUser?.toDomain());
+  }
+~~~
+>Implement toDomain()
+~~~dart
+extension FirebaseUserDomainX on User {
+  AsUser toDomain() {
+    return AsUser(id: UniqueId.fromUniqueString(uid));
+  }
+}
+~~~
+
+## ## infrustructure/auth/firabse_auth_facade.dart
+~~~dart
+  @override
+  Future<void> signOut() => Future.wait([
+        _googleSignIn.signOut(),
+        _firebaseAuth.signOut(),
+      ]);
+~~~
+## End of T9
+
 ~~~dart
 
 ~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+~~~dart
+
+~~~
+
 
 
 
