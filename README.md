@@ -354,6 +354,8 @@ class SignInFormBloc extends Bloc<SignInFormEvent, SignInFormState> {
 
 ## Field updates:
 >The simplest events to implement are those which simply receive unvalidated raw data from the UI and transform it into validated ValueObjects.
+
+>Reset the previous error cause we don't need previous error. 
 ~~~dart
 on<EmailChanged>((event, emit) async {
       emit(state.copyWith(
@@ -1189,36 +1191,236 @@ Color makeColorOpaque(Color color) {
 ~~~
 ## End of T12
 
-~~~dart
 
-~~~
-~~~dart
+# Note Entities(T13)
+>entities are basically a group of value objects which has an identity. which is going to be given by the unique identifier. 
 
-~~~
+## domain/notes/note.dart
 ~~~dart
-
+  const factory Note({
+    required UniqueId id,
+    required NoteBody body,
+    required NoteColor color,
+    required ListThree<TodoItem> todos,
+  }) = _Note;
 ~~~
+
+>required UniqueId id: the first one is the unique id by which each individual instance of the note class will be identified. so it will be required parameter unique id.
+
+>required ListThree<TodoItem> todos: we can do something like this but then the problem arises that these todo's cannot be completed because this listThree of to-do name has no concept of done or undone todo. it just holds basically what is a validated string of a todo name but we need to provide a way to complete or uncomplete the given todo. that's why we are going to create yet another entity and this one is going to be called todo_item.dart.
+
+## domain/notes/todo_item.dart
 ~~~dart
-
+  const factory TodoItem({
+    required UniqueId id,
+    required TodoName name,
+    required bool done,
+  }) = _TodoItem;
 ~~~
+
+>we are going to provide some helper factories and also getters or other properties which are going to allow us to write code more quickly in the future. in the future parts that is so the first thing we are going to add to our entities are empty factories because think about it. when you open up a new screen that you want to create a new note you need to have an empty note body a certain default note color will be selected and you are going to have zero to do items added to the note so that's going to be sort of the empty state.
+## domain/notes/note.dart
 ~~~dart
-
+  factory Note.empty() => Note(
+        id: UniqueId(),
+        body: NoteBody(''),
+        color: NoteColor(NoteColor.predefinedColors[0]),
+        todos: ListThree(emptyList()),
+      );
 ~~~
+
+>similar to this we also want to have an empty factory for whenever we add a new todo_item inside the note creation form in the ui. so in order to simplify the process of creating a new empty todo again we are going to have factory todo_item.empty and we're just going to instantiate a to do item.
+## domain/notes/todo_item.dart
 ~~~dart
-
+  factory TodoItem.empty() => TodoItem(
+        id: UniqueId(),
+        name: TodoName(''),
+        done: false,
+      );
 ~~~
+
+>when i open up the app and open up the note creation form like this and i hit this check mark to basically add the note to the database we are going to get an error message under the note body saying that it cannot be empty and the same would go also for the to-do's and we cannot add more than three to-do's and so on so that's all nice but the thing is that these error messages are coming from the individual value objects for example from the note body value object, from the list 3 value object and also from the todo name value object but how can we validate the whole entity at once? if all are valid then the whole entity is valid if just one value object is invalid that means that the whole entity is also invalid.
+
+>we just cannot even see the invalid node in our ui and technically what we could do then is create some sort of a reporting system where if we click on this invalid node in the ui it would open up some support client or for example it would send an email to the application support team with the id of the failed note. Let's implements:
+
+## domain/notes/todo_item.dart
 ~~~dart
-
+const TodoItem._(); //1st need a empty constructor
+//check only name is an error or not
+  Option<ValueFailure<dynamic>> get failureOption {
+    return name.value.fold(some, (r) => none());
+    // (f) => some(f)   shortend to some
+  }
+}
+//return some if any error
+//return none if no error
 ~~~
+
+## domain/notes/note.dart
+>Similar for note.dart
 ~~~dart
-
+  Option<ValueFailure<dynamic>> get failureOption {
+    return body.failureOrUnit //take all kinds off failure and return one type
+        .andThen<Unit>(todos.failureOrUnit)
+        .andThen<Unit>(
+          todos
+              .getOrCrash()
+              .map((todoItem) => todoItem.failureOption)
+              .filter((o) => o.isSome())
+              .getOrElse(0, (_) => none())
+              //checking atleast 1 element. if not then none if yes then it's valid
+              .fold(() => right(unit), (l) => left(l as ValueFailure<String>)),
+        )
+        .map((r) => null)
+        .fold((f) => some(f as ValueFailure<String>), (r) => none());
+  }
 ~~~
+
+>**andThen<Unit>(todos.failureOrUnit)**: just like flat map if the first validated value is invalid so it's left then the whole chain will be basically just short circuited it will be skipped and the whole entity will be thus immediately evaluated as invalid. so inside this andthen we want to provide the next thing which should be validated.
+
+## domain/core/value_objects/dart
 ~~~dart
-
+  Either<ValueFailure<dynamic>, Unit> get failureOrUnit {
+    return value.fold(
+      (l) => Left(l),
+      (r) => const Right(unit),
+    );
+  }
 ~~~
+>just like that we have gotten rid of all of the things which prevent us from using different value objects in one validation chain so now we can go ahead into the note.dart and instead of saying body.value we are going to say body dot failure or unit.
+
+>**filter((o) => o.isSome())** : so we are going to filter by a predicate which will say that the failure option o is sum. so what this is going to do is that we're going to have only the failed to do items in this kt list returned by the filter method.
+
+>**getOrElse(0, (_) => none())**: we want to say get or else on the index of zero and if we cannot get this zero index meaning that there is no element present then we're going to return none okay so what are we doing here with this get or else well if we cannot get the zeroth item from this filtered list which should contain only the failed todo items that means that there are no failed to do items present which in its logical conclusion means that all of the to do items are valid.
+
+>**fold(() => right(unit), (l) => left(l as ValueFailure<String>))**: well we can again use our trusty fold method and if the none value arrives that means that our whole list of to-do items holds only valid to do items. so we are going to return right unit. why write unit? well because our failure or units have the right value being a unit that's why we return right unit and in another case that is when at least one element inside the list of to-do items is invalid we are going to return that value failure so left and let's rename the a parameter to f so left f.
+## End of T13
+
+
+# Data Transfer Objects(T14)
+>now comes the time to create the interface of the I node repository or of the node repository which will live in the domain layer it's going to be completely independent of firebase or whatever else you are using to store data.
+
+>then the implementation of the repository which we are about to define an interface of is going to be in the infrastructure layer.
+
+>we are not going to use a future to watch notes but instead we are going to use a stream. streams are asynchronous beings which operate over time. we can listen to streams and they are going to deliver us new results over time in this case whenever the notes are updated on firestore we're going to get new results from this watch notes method.
+## domain/notes/i_note_repository.dart
 ~~~dart
-
+abstract class INoteRepository {
+  //watch notes
+  Stream<Either<NoteFailure, KtList<Note>>> watchAll();
+  //watch uncompleted notes
+  Stream<Either<NoteFailure, KtList<Note>>> watchUncompleted();
+  //CUD
+  //CUD doesn't have return type. Instead void use Unit
+  Future<Either<NoteFailure, Unit>> create(Note note);
+  Future<Either<NoteFailure, Unit>> update(Note note);
+  Future<Either<NoteFailure, Unit>> delete(Note note);
+}
 ~~~
+
+>To handle failure:
+## domain/notes/note_failure.dart
+~~~dart
+@freezed
+abstract class NoteFailure with _$NoteFailure {
+  const factory NoteFailure.unexpected() = _Unexpected;
+  const factory NoteFailure.insufficientPermission() = _InsufficientPermission;
+  const factory NoteFailure.unableToUpdate() = _UnableToUpdate;
+}
+~~~
+
+>the nodes domain layer all done and we can now move over to the next layer which is going to be the infrastructure layer. 
+
+>this file will hold both the to-do item data transfer object and also the note data transfer objects.
+
+## infrustructure/notes/note_dtos.dart
+~~~dart
+@freezed
+abstract class TodoItemDto implements _$TodoItemDto {
+  const factory TodoItemDto({
+    required String? id,
+    required String? name,
+    required bool? done,
+  }) = _TodoItemDto;
+
+  factory TodoItemDto.fromJson(Map<String, dynamic> json) =>
+      _$TodoItemDtoFromJson(json);
+
+  factory TodoItemDto.fromDomain(TodoItem todoItem) {
+    return TodoItemDto(
+        id: todoItem.id.getOrCrash(),
+        name: todoItem.name.getOrCrash(),
+        done: todoItem.done);
+  }
+
+  const TodoItemDto._();
+  TodoItem toDomain() {
+    return TodoItem(
+      id: UniqueId.fromUniqueString(id!),
+      name: TodoName(name!),
+      done: done!,
+    );
+  }
+}
+~~~
+>we want to keep our domain layer completely independent from outside influence all of the mapping is going to happen here inside the DTO and nothing will go into the entity. so here we want to define both the from domain factory so let's do it right now. factory to-do item DTO from domain and just like it says in the name we are going to use this factory to construct the data transfer object from an entity which is present inside the domain layer.
+
+>**TodoItem toDomain():** whenever we receive a to-do item from fire store or from some other source of data we are going to receive it as simple data as string and boolean and then the other layers of our app are going to want to communicate in terms of to-do item entity not to-do item DTO and this conversion from DTO to domain entity is going to happen inside - domain method which is going to return todo item. 
+
+>Let's create NoteDto:
+
+~~~dart
+@freezed
+abstract class NoteDto implements _$NoteDto {
+  const factory NoteDto({
+    @JsonKey(ignore: true) String? id,
+    @required String? body,
+    @required int? color,
+    @required List<TodoItemDto?>? todos,
+    @ServerTimeStampConverter() required FieldValue? serverTimeStamp,
+  }) = _NoteDto;
+
+  factory NoteDto.fromDomain(Note note) {
+    return NoteDto(
+      id: note.id.getOrCrash(),
+      body: note.body.getOrCrash(),
+      color: note.color.getOrCrash().value,
+      todos: note.todos
+          .getOrCrash()
+          .map(
+            (todoItem) => TodoItemDto.fromDomain(todoItem),
+          )
+          .asList(),
+      serverTimeStamp: FieldValue.serverTimestamp(),
+    );
+  }
+
+  factory NoteDto.fromFirestore(DocumentSnapshot doc) {
+    final data = Map<String, dynamic>.from(doc.data()! as Map<String, dynamic>);
+    return NoteDto.fromJson(data).copyWith(id: doc.id);
+  }
+
+  factory NoteDto.fromJson(Map<String, dynamic> json) =>
+      _$NoteDtoFromJson(json);
+
+  const NoteDto._();
+  Note toDomain() {
+    return Note(
+      id: UniqueId.fromUniqueString(id!),
+      body: NoteBody(body!),
+      color: NoteColor(Color(color!)),
+      todos: ListThree(todos!.map((dto) => dto!.toDomain()).toImmutableList()),
+    );
+  }
+}
+~~~
+
+>**@JsonKey(ignore: true) String? id:** we do not want to store the ID along with all of the other fields. we are going to make it be ignored by the JSON conversion. so we are going to annotate this ID with a JSON key and we are going to say that ignore is true and now when we provide a from JSON factory.
+
+>**todos: ListThree(todos!.map((dto) => dto!.toDomain()).toImmutableList()):** we have to do is which are going to be a list three to duce that map and we want to map our to-do item data transfer objects into entities so this DT o is of type to-do item detail and we want to call to domain on the hat which is the function we have implemented a while ago in this part so now that we have entity representations of our to-do item details now we want to convert this simple list or the simple iterable writer into a katie list which our list three value object expects so we are going to say something like two immutable list which is an extension provided by the katie dart package.
+
+>**factory NoteDto.fromFirestore(DocumentSnapshot doc):**in addition to from json this note DTO which is going to be stored inside fire store will also greatly benefit from having a from fire store method. it will be very similar to from json. it's actually going to use from json but it will know about one more thing about the ID of the firestore document and again ID of a fire store document is not something we are going to have inside this map string dynamic json coming from fire store that's because ID is not a part of the data and itself it's just a separate identifier.
+## End of T14
 ~~~dart
 
 ~~~
