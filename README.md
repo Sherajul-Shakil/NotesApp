@@ -12,8 +12,8 @@ Runnig projecrt.
 ## Command: flutter pub run build_runner watch --delete-conflicting-outputs
 
 # Key architectural layers present in a DDD Flutter app(T1)
+![ddd_structure ](https://user-images.githubusercontent.com/91844060/155896399-e24b85a4-5bb7-4254-bd31-bade31f0a8d5.png)
 
-<img src="./assets/images/ddd_structure.png" width="500" title="hover text">
 
 >There are a few things that I couldn't fit on the diagram. Namely:
 
@@ -1421,9 +1421,6 @@ abstract class NoteDto implements _$NoteDto {
 
 >**factory NoteDto.fromFirestore(DocumentSnapshot doc):**in addition to from json this note DTO which is going to be stored inside fire store will also greatly benefit from having a from fire store method. it will be very similar to from json. it's actually going to use from json but it will know about one more thing about the ID of the firestore document and again ID of a fire store document is not something we are going to have inside this map string dynamic json coming from fire store that's because ID is not a part of the data and itself it's just a separate identifier.
 ## End of T14
-~~~dart
-
-~~~
 ~~~dart
 
 ~~~
